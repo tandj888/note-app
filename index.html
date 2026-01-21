@@ -57,6 +57,19 @@
                 backdrop-filter: blur(10px);
                 -webkit-backdrop-filter: blur(10px);
             }
+            /* 新增：保留格式的样式 */
+            .preserve-format {
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+            /* 新增：带截断的保留格式样式 */
+            .preserve-format-clamp {
+                white-space: pre-wrap;
+                overflow: hidden;
+                display: -webkit-box;
+                -webkit-line-clamp: 4;
+                -webkit-box-orient: vertical;
+            }
         }
     </style>
 </head>
@@ -132,7 +145,7 @@
                 
                 <div class="mb-4">
                     <label for="noteContent" class="block text-sm font-medium text-gray-700 mb-1">内容</label>
-                    <textarea id="noteContent" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="输入笔记内容..."></textarea>
+                    <textarea id="noteContent" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent preserve-format" placeholder="输入笔记内容..."></textarea>
                 </div>
             </div>
             
@@ -162,7 +175,7 @@
             
             <div class="p-4" style="font-size: var(--note-font-size, 16px)">
                 <h3 id="detailNoteTitle" class="text-xl font-bold mb-4 text-gray-800"></h3>
-                <div id="detailNoteContent" class="text-gray-600 whitespace-pre-line"></div>
+                <div id="detailNoteContent" class="text-gray-600 preserve-format"></div>
             </div>
             
             <div class="p-4 border-t border-gray-200 flex justify-between items-center">
@@ -230,24 +243,22 @@
                 newNoteBtn.addEventListener('click', () => openModal());
                 emptyStateNewBtn.addEventListener('click', () => openModal());
 
-                // 模态框控制
+                // 模态框控制 - 核心改动1：移除点击外部关闭，仅保留按钮关闭
                 closeModal.addEventListener('click', () => closeModalFunc());
                 cancelBtn.addEventListener('click', () => closeModalFunc());
                 saveNoteBtn.addEventListener('click', () => saveNote());
                 deleteNoteBtn.addEventListener('click', () => deleteNote());
-                noteModal.addEventListener('click', (e) => {
-                    if (e.target === noteModal) closeModalFunc();
-                });
+                // 注释掉/删除这行：点击外部关闭的逻辑
+                // noteModal.addEventListener('click', (e) => { if (e.target === noteModal) closeModalFunc(); });
 
-                // 详情模态框控制
+                // 详情模态框控制 - 核心改动2：移除点击外部关闭，仅保留按钮关闭
                 closeDetailModal.addEventListener('click', () => closeDetailModalFunc());
                 editFromDetailBtn.addEventListener('click', () => {
                     closeDetailModalFunc();
                     openModal(currentNoteId);
                 });
-                detailModal.addEventListener('click', (e) => {
-                    if (e.target === detailModal) closeDetailModalFunc();
-                });
+                // 注释掉/删除这行：点击外部关闭的逻辑
+                // detailModal.addEventListener('click', (e) => { if (e.target === detailModal) closeDetailModalFunc(); });
 
                 // 字体大小调整
                 increaseFont.addEventListener('click', () => {
@@ -269,7 +280,7 @@
                     renderNotes();
                 });
 
-                // 键盘快捷键
+                // 键盘快捷键 - 核心改动3：仅保留Esc关闭（可选，若需要也可注释）
                 document.addEventListener('keydown', (e) => {
                     if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
                         e.preventDefault();
@@ -279,6 +290,7 @@
                         e.preventDefault();
                         saveNote();
                     }
+                    // 若想完全禁用Esc关闭，可注释下面这行
                     if (e.key === 'Escape' && (!noteModal.classList.contains('hidden') || !detailModal.classList.contains('hidden'))) {
                         e.preventDefault();
                         closeModalFunc();
@@ -316,7 +328,7 @@
                 }
             }
 
-            // 创建笔记元素（核心改动：新增详情和编辑按钮）
+            // 创建笔记元素（核心：保留格式显示）
             function createNoteElement(note, index) {
                 const noteDiv = document.createElement('div');
                 noteDiv.className = `note-hover rounded-lg overflow-hidden animate-fade-in ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} note-shadow`;
@@ -325,7 +337,8 @@
                 noteDiv.innerHTML = `
                     <div class="p-4" style="font-size: var(--note-font-size, 16px)">
                         <h3 class="font-semibold text-lg mb-2 truncate">${note.title || '无标题'}</h3>
-                        <p class="text-gray-600 line-clamp-4">${note.content || '无内容'}</p>
+                        <!-- 关键改动：preserve-format-clamp 类保留格式并截断 -->
+                        <p class="text-gray-600 preserve-format-clamp">${note.content || '无内容'}</p>
                     </div>
                     <div class="px-4 py-2 bg-gray-100 text-xs text-gray-500 flex justify-between items-center">
                         <span>${formatDate(note.updatedAt)}</span>
@@ -364,6 +377,7 @@
                 const note = notes.find(n => n.id === noteId);
                 if (note) {
                     detailNoteTitle.textContent = note.title || '无标题';
+                    // 直接赋值，preserve-format 类会保留所有格式
                     detailNoteContent.textContent = note.content || '无内容';
                     detailNoteTime.textContent = `最后更新：${formatDate(note.updatedAt)}`;
                     detailModal.classList.remove('hidden');
@@ -385,6 +399,7 @@
                     if (note) {
                         modalTitle.textContent = '编辑笔记';
                         noteTitle.value = note.title || '';
+                        // 编辑框也保留原始格式
                         noteContent.value = note.content || '';
                         deleteNoteBtn.classList.remove('hidden');
                     }
@@ -410,9 +425,9 @@
             // 保存笔记
             function saveNote() {
                 const title = noteTitle.value.trim();
-                const content = noteContent.value.trim();
+                const content = noteContent.value; // 不trim，保留所有空格/换行
                 
-                if (!title && !content) {
+                if (!title && !content.trim()) {
                     showNotification('请输入笔记标题或内容', 'error');
                     return;
                 }
@@ -425,7 +440,7 @@
                         notes[noteIndex] = {
                             ...notes[noteIndex],
                             title,
-                            content,
+                            content, // 完整保存原始内容
                             updatedAt: timestamp
                         };
                         showNotification('笔记已更新');
@@ -434,7 +449,7 @@
                     const newNote = {
                         id: generateId(),
                         title,
-                        content,
+                        content, // 完整保存原始内容
                         createdAt: timestamp,
                         updatedAt: timestamp
                     };

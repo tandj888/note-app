@@ -6,6 +6,7 @@
     <title>黑白笔记 - 简洁高效的在线笔记工具</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -57,18 +58,143 @@
                 backdrop-filter: blur(10px);
                 -webkit-backdrop-filter: blur(10px);
             }
-            /* 新增：保留格式的样式 */
             .preserve-format {
                 white-space: pre-wrap;
                 word-wrap: break-word;
             }
-            /* 新增：带截断的保留格式样式 */
             .preserve-format-clamp {
                 white-space: pre-wrap;
                 overflow: hidden;
                 display: -webkit-box;
                 -webkit-line-clamp: 4;
                 -webkit-box-orient: vertical;
+            }
+            .file-upload-area {
+                border: 2px dashed #d1d5db;
+                border-radius: 0.375rem;
+                transition: border-color 0.2s ease;
+            }
+            .file-upload-area:hover {
+                border-color: #3B82F6;
+            }
+            .file-upload-area.active {
+                border-color: #3B82F6;
+                background-color: #eff6ff;
+            }
+            .attachment-item {
+                transition: background-color 0.2s ease;
+            }
+            .attachment-item:hover {
+                background-color: #f3f4f6;
+            }
+            .preview-modal {
+                z-index: 9999 !important;
+            }
+            .preview-modal-content {
+                max-height: 80vh;
+                overflow: auto;
+            }
+            .preview-image {
+                max-width: 100%;
+                max-height: 70vh;
+                object-fit: contain;
+            }
+            .preview-text {
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                max-height: 70vh;
+                overflow: auto;
+            }
+            /* 核心修改：PDF容器和翻页按钮样式 */
+            #pdf-preview-container {
+                width: 100%;
+                height: 70vh;
+                position: relative;
+                overflow-y: auto;
+                padding-bottom: 60px;
+            }
+            .pdf-nav {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                background: rgba(255, 255, 255, 0.95);
+                padding: 10px 0;
+                border-top: 1px solid #e5e7eb;
+                box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+                z-index: 10;
+            }
+            .pdf-nav-btn {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #f3f4f6;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .pdf-nav-btn:hover {
+                background: #e5e7eb;
+            }
+            .pdf-nav-btn:disabled {
+                opacity: 0.3;
+                cursor: not-allowed;
+            }
+            .pdf-page-info {
+                font-size: 14px;
+                color: #4b5563;
+                min-width: 60px;
+                text-align: center;
+            }
+            .attachment-nav {
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.9);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                z-index: 10;
+            }
+            .attachment-prev {
+                left: 20px;
+            }
+            .attachment-next {
+                right: 20px;
+            }
+            .attachment-nav:disabled {
+                opacity: 0.3;
+                cursor: not-allowed;
+            }
+            .attachment-index {
+                position: absolute;
+                bottom: 20px;
+                right: 20px;
+                background: rgba(0,0,0,0.7);
+                color: white;
+                padding: 4px 12px;
+                border-radius: 16px;
+                font-size: 14px;
+            }
+            .image-load-error {
+                padding: 8px;
+                color: #ef4444;
+                text-align: center;
+                background-color: #fef2f2;
+                border-radius: 4px;
+                margin-top: 10px;
+                font-size: 14px;
             }
         }
     </style>
@@ -83,14 +209,12 @@
             </div>
             
             <div class="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
-                <!-- 搜索框 -->
                 <div class="relative w-full md:w-64">
                     <input type="text" id="searchInput" placeholder="搜索笔记..." 
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
                     <i class="fa fa-search absolute right-3 top-3 text-gray-400"></i>
                 </div>
                 
-                <!-- 字体大小调整 -->
                 <div class="flex items-center space-x-2">
                     <button id="decreaseFont" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
                         <i class="fa fa-font text-sm"></i>
@@ -101,7 +225,6 @@
                     </button>
                 </div>
                 
-                <!-- 新建笔记按钮 -->
                 <button id="newNoteBtn" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center">
                     <i class="fa fa-plus mr-1"></i> 新建笔记
                 </button>
@@ -109,14 +232,10 @@
         </div>
     </header>
 
-    <!-- 主内容区 -->
     <main class="container mx-auto px-4 py-6">
-        <!-- 笔记网格 -->
         <div id="notesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- 笔记将通过 JavaScript 动态添加 -->
         </div>
         
-        <!-- 空状态提示 -->
         <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 text-center">
             <i class="fa fa-sticky-note-o text-6xl text-gray-300 mb-4"></i>
             <h2 class="text-xl font-medium text-gray-500 mb-2">还没有笔记</h2>
@@ -127,10 +246,9 @@
         </div>
     </main>
 
-    <!-- 新建/编辑笔记模态框 -->
     <div id="noteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 animate-fade-in">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 animate-fade-in max-h-[90vh] overflow-y-auto">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
                 <h2 id="modalTitle" class="text-lg font-semibold">新建笔记</h2>
                 <button id="closeModal" class="text-gray-400 hover:text-gray-600">
                     <i class="fa fa-times"></i>
@@ -147,9 +265,23 @@
                     <label for="noteContent" class="block text-sm font-medium text-gray-700 mb-1">内容</label>
                     <textarea id="noteContent" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent preserve-format" placeholder="输入笔记内容..."></textarea>
                 </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">附件</label>
+                    <div id="fileUploadArea" class="file-upload-area p-6 text-center mb-3 cursor-pointer">
+                        <input type="file" id="fileInput" class="hidden" multiple accept="*">
+                        <i class="fa fa-paperclip text-3xl text-gray-400 mb-2"></i>
+                        <p class="text-gray-500 mb-1">点击或拖拽文件到此处上传（支持多文件）</p>
+                        <p class="text-xs text-gray-400">支持所有文件类型，单文件最大5MB</p>
+                    </div>
+                    
+                    <div id="attachmentsList" class="space-y-2 max-h-40 overflow-y-auto">
+                        <div id="noAttachments" class="text-center text-gray-400 text-sm py-2">暂无附件</div>
+                    </div>
+                </div>
             </div>
             
-            <div class="p-4 border-t border-gray-200 flex justify-end space-x-3">
+            <div class="p-4 border-t border-gray-200 flex justify-end space-x-3 sticky bottom-0 bg-white">
                 <button id="deleteNoteBtn" class="px-4 py-2 text-red-600 border border-red-300 rounded-md hover:bg-red-50 transition-colors hidden">
                     <i class="fa fa-trash mr-1"></i> 删除
                 </button>
@@ -163,10 +295,9 @@
         </div>
     </div>
 
-    <!-- 笔记详情模态框 -->
     <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 animate-fade-in">
-            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 animate-fade-in max-h-[90vh] overflow-y-auto">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
                 <h2 id="detailTitle" class="text-lg font-semibold">笔记详情</h2>
                 <button id="closeDetailModal" class="text-gray-400 hover:text-gray-600">
                     <i class="fa fa-times"></i>
@@ -175,10 +306,17 @@
             
             <div class="p-4" style="font-size: var(--note-font-size, 16px)">
                 <h3 id="detailNoteTitle" class="text-xl font-bold mb-4 text-gray-800"></h3>
-                <div id="detailNoteContent" class="text-gray-600 preserve-format"></div>
+                <div id="detailNoteContent" class="text-gray-600 preserve-format mb-6"></div>
+                
+                <div id="detailAttachmentsContainer" class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">附件</h4>
+                    <div id="detailAttachmentsList" class="space-y-2">
+                        <div id="detailNoAttachments" class="text-center text-gray-400 text-sm py-2">暂无附件</div>
+                    </div>
+                </div>
             </div>
             
-            <div class="p-4 border-t border-gray-200 flex justify-between items-center">
+            <div class="p-4 border-t border-gray-200 flex justify-between items-center sticky bottom-0 bg-white">
                 <span id="detailNoteTime" class="text-xs text-gray-500"></span>
                 <button id="editFromDetailBtn" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 transition-colors">
                     <i class="fa fa-pencil mr-1"></i> 编辑
@@ -187,16 +325,67 @@
         </div>
     </div>
 
-    <!-- 通知提示 -->
+    <div id="previewModal" class="preview-modal fixed inset-0 bg-black bg-opacity-70 z-9999 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 animate-fade-in relative">
+            <button id="prevAttachmentBtn" class="attachment-nav attachment-prev" disabled>
+                <i class="fa fa-chevron-left text-primary"></i>
+            </button>
+            <button id="nextAttachmentBtn" class="attachment-nav attachment-next" disabled>
+                <i class="fa fa-chevron-right text-primary"></i>
+            </button>
+            <div id="attachmentIndex" class="attachment-index hidden">1/1</div>
+            
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
+                <h2 id="previewTitle" class="text-lg font-semibold">文件预览</h2>
+                <div class="flex items-center space-x-3">
+                    <button id="downloadFromPreviewBtn" class="text-primary hover:text-blue-700">
+                        <i class="fa fa-download mr-1"></i> 下载
+                    </button>
+                    <button id="closePreviewModal" class="text-gray-400 hover:text-gray-600">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="p-4 preview-modal-content">
+                <div id="previewContent" class="flex flex-col items-center justify-center">
+                    <div id="previewLoading" class="py-8 text-center">
+                        <i class="fa fa-spinner fa-spin text-3xl text-primary mb-2"></i>
+                        <p class="text-gray-500">加载预览中...</p>
+                    </div>
+                    <div id="previewUnsupported" class="py-8 text-center hidden">
+                        <i class="fa fa-exclamation-circle text-3xl text-yellow-500 mb-2"></i>
+                        <p class="text-gray-500">暂不支持预览该类型文件，请下载查看</p>
+                    </div>
+                    <div id="previewImageContainer" class="hidden w-full flex flex-col items-center">
+                        <img id="previewImage" class="preview-image" src="" alt="预览图片">
+                        <div id="imageErrorMsg" class="image-load-error hidden"></div>
+                    </div>
+                    <pre id="previewText" class="preview-text w-full p-4 bg-gray-50 rounded-md border border-gray-200 hidden"></pre>
+                    <div id="pdf-preview-container" class="hidden">
+                        <canvas id="pdf-preview-canvas"></canvas>
+                        <div class="pdf-nav">
+                            <button id="pdf-prev-btn" class="pdf-nav-btn" disabled>
+                                <i class="fa fa-chevron-left text-primary"></i>
+                            </button>
+                            <span id="pdf-page-info" class="pdf-page-info">1/1</span>
+                            <button id="pdf-next-btn" class="pdf-nav-btn" disabled>
+                                <i class="fa fa-chevron-right text-primary"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="notification" class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg transform translate-y-16 opacity-0 transition-all duration-300 z-50 flex items-center">
         <i id="notificationIcon" class="fa fa-check-circle mr-2"></i>
         <span id="notificationText">操作成功</span>
     </div>
 
     <script>
-        // 笔记应用主逻辑
         document.addEventListener('DOMContentLoaded', function() {
-            // DOM 元素
             const notesGrid = document.getElementById('notesGrid');
             const emptyState = document.getElementById('emptyState');
             const newNoteBtn = document.getElementById('newNoteBtn');
@@ -216,51 +405,504 @@
             const notification = document.getElementById('notification');
             const notificationText = document.getElementById('notificationText');
             const notificationIcon = document.getElementById('notificationIcon');
-            // 详情模态框元素
             const detailModal = document.getElementById('detailModal');
             const closeDetailModal = document.getElementById('closeDetailModal');
             const detailNoteTitle = document.getElementById('detailNoteTitle');
             const detailNoteContent = document.getElementById('detailNoteContent');
             const detailNoteTime = document.getElementById('detailNoteTime');
             const editFromDetailBtn = document.getElementById('editFromDetailBtn');
-
-            // 应用状态
+            const fileUploadArea = document.getElementById('fileUploadArea');
+            const fileInput = document.getElementById('fileInput');
+            const attachmentsList = document.getElementById('attachmentsList');
+            const noAttachments = document.getElementById('noAttachments');
+            const detailAttachmentsList = document.getElementById('detailAttachmentsList');
+            const detailNoAttachments = document.getElementById('detailNoAttachments');
+            const previewModal = document.getElementById('previewModal');
+            const closePreviewModal = document.getElementById('closePreviewModal');
+            const previewTitle = document.getElementById('previewTitle');
+            const previewContent = document.getElementById('previewContent');
+            const previewLoading = document.getElementById('previewLoading');
+            const previewUnsupported = document.getElementById('previewUnsupported');
+            const previewImageContainer = document.getElementById('previewImageContainer');
+            const previewImage = document.getElementById('previewImage');
+            const imageErrorMsg = document.getElementById('imageErrorMsg');
+            const previewText = document.getElementById('previewText');
+            const pdfPreviewContainer = document.getElementById('pdf-preview-container');
+            const pdfPreviewCanvas = document.getElementById('pdf-preview-canvas');
+            const downloadFromPreviewBtn = document.getElementById('downloadFromPreviewBtn');
+            const pdfPrevBtn = document.getElementById('pdf-prev-btn');
+            const pdfNextBtn = document.getElementById('pdf-next-btn');
+            const pdfPageInfo = document.getElementById('pdf-page-info');
+            const prevAttachmentBtn = document.getElementById('prevAttachmentBtn');
+            const nextAttachmentBtn = document.getElementById('nextAttachmentBtn');
+            const attachmentIndex = document.getElementById('attachmentIndex');
+            
             let notes = JSON.parse(localStorage.getItem('notes')) || [];
             let currentNoteId = null;
             let currentFontSize = parseInt(localStorage.getItem('fontSize')) || 16;
             let searchTerm = '';
+            let currentAttachments = [];
+            let currentPreviewAttachment = null;
+            let previewAttachmentsList = [];
+            let currentPreviewIndex = 0;
+            let currentPdfDoc = null;
+            let currentPdfPage = 1;
+            let totalPdfPages = 1;
 
-            // 初始化应用
             function initApp() {
                 updateFontSize();
                 renderNotes();
                 setupEventListeners();
+                setupFileUpload();
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+                setupImageErrorHandling();
             }
 
-            // 设置事件监听器
+            function setupImageErrorHandling() {
+                previewImage.addEventListener('error', function(e) {
+                    console.error('图片加载失败:', e);
+                    imageErrorMsg.textContent = '图片加载失败，请尝试下载查看';
+                    imageErrorMsg.classList.remove('hidden');
+                });
+                
+                previewImage.addEventListener('load', function() {
+                    imageErrorMsg.classList.add('hidden');
+                });
+            }
+
+            function setupFileUpload() {
+                fileUploadArea.addEventListener('click', () => {
+                    fileInput.click();
+                });
+
+                fileUploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    fileUploadArea.classList.add('active');
+                });
+
+                fileUploadArea.addEventListener('dragleave', () => {
+                    fileUploadArea.classList.remove('active');
+                });
+
+                fileUploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    fileUploadArea.classList.remove('active');
+                    if (e.dataTransfer.files.length > 0) {
+                        handleFiles(e.dataTransfer.files);
+                    }
+                });
+
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        handleFiles(e.target.files);
+                    }
+                });
+            }
+
+            function handleFiles(files) {
+                const maxSize = 5 * 1024 * 1024;
+                Array.from(files).forEach(file => {
+                    if (file.size > maxSize) {
+                        showNotification(`文件 ${file.name} 超过5MB，无法上传`, 'error');
+                        return;
+                    }
+
+                    const isDuplicate = currentAttachments.some(att => att.name === file.name);
+                    if (isDuplicate) {
+                        showNotification(`文件 ${file.name} 已上传`, 'error');
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    
+                    reader.onload = (e) => {
+                        if (!e.target.result || !e.target.result.startsWith('data:')) {
+                            showNotification(`文件 ${file.name} 转换失败`, 'error');
+                            return;
+                        }
+                        
+                        let previewUrl = e.target.result;
+                        if (file.type.includes('image')) {
+                            previewUrl = URL.createObjectURL(file);
+                        }
+                        
+                        createAttachment(file, e.target.result, previewUrl);
+                    };
+                    
+                    reader.onerror = (e) => {
+                        console.error('文件读取失败:', e);
+                        showNotification(`文件 ${file.name} 读取失败`, 'error');
+                    };
+                    
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            function createAttachment(file, data, previewUrl = null) {
+                const attachment = {
+                    id: generateId(),
+                    name: file.name,
+                    type: file.type || 'application/octet-stream',
+                    size: file.size,
+                    data: data,
+                    previewUrl: previewUrl || data,
+                    uploadTime: new Date().toISOString()
+                };
+
+                currentAttachments.push(attachment);
+                renderAttachmentsList();
+                showNotification(`文件 ${file.name} 上传成功`);
+            }
+
+            function renderAttachmentsList() {
+                if (currentAttachments.length === 0) {
+                    noAttachments.classList.remove('hidden');
+                    attachmentsList.querySelectorAll('.attachment-item').forEach(item => item.remove());
+                    return;
+                }
+                noAttachments.classList.add('hidden');
+
+                attachmentsList.querySelectorAll('.attachment-item').forEach(item => item.remove());
+
+                currentAttachments.forEach(attachment => {
+                    const attachmentItem = document.createElement('div');
+                    attachmentItem.className = 'attachment-item flex items-center justify-between p-2 rounded border border-gray-200';
+                    attachmentItem.innerHTML = `
+                        <div class="flex items-center overflow-hidden">
+                            <i class="fa ${getFileIcon(attachment.type)} text-gray-500 mr-2"></i>
+                            <span class="text-sm truncate">${attachment.name}</span>
+                            <span class="text-xs text-gray-400 ml-2">${formatFileSize(attachment.size)}</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="preview-attachment text-green-500 hover:text-green-700 p-1" data-id="${attachment.id}">
+                                <i class="fa fa-eye"></i>
+                            </button>
+                            <button class="delete-attachment text-red-500 hover:text-red-700 p-1" data-id="${attachment.id}">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+
+                    attachmentItem.querySelector('.preview-attachment').addEventListener('click', (e) => {
+                        const attachmentId = e.target.closest('button').dataset.id;
+                        const att = currentAttachments.find(a => a.id === attachmentId);
+                        openPreviewModal(att, currentAttachments);
+                    });
+                    
+                    attachmentItem.querySelector('.delete-attachment').addEventListener('click', (e) => {
+                        const attachmentId = e.target.closest('button').dataset.id;
+                        deleteAttachment(attachmentId);
+                    });
+
+                    attachmentsList.appendChild(attachmentItem);
+                });
+            }
+
+            function deleteAttachment(attachmentId) {
+                const attachmentIndex = currentAttachments.findIndex(att => att.id === attachmentId);
+                if (attachmentIndex !== -1) {
+                    const deletedAttachment = currentAttachments[attachmentIndex];
+                    const deletedName = deletedAttachment.name;
+                    
+                    if (deletedAttachment.type.includes('image') && deletedAttachment.previewUrl !== deletedAttachment.data) {
+                        URL.revokeObjectURL(deletedAttachment.previewUrl);
+                    }
+                    
+                    currentAttachments.splice(attachmentIndex, 1);
+                    renderAttachmentsList();
+                    showNotification(`文件 ${deletedName} 已删除`);
+                }
+            }
+
+            function renderDetailAttachmentsList(attachments) {
+                if (!attachments || attachments.length === 0) {
+                    detailNoAttachments.classList.remove('hidden');
+                    detailAttachmentsList.querySelectorAll('.attachment-item').forEach(item => item.remove());
+                    return;
+                }
+                detailNoAttachments.classList.add('hidden');
+
+                detailAttachmentsList.querySelectorAll('.attachment-item').forEach(item => item.remove());
+
+                attachments.forEach(attachment => {
+                    const attachmentItem = document.createElement('div');
+                    attachmentItem.className = 'attachment-item flex items-center justify-between p-2 rounded border border-gray-200';
+                    attachmentItem.innerHTML = `
+                        <div class="flex items-center overflow-hidden">
+                            <i class="fa ${getFileIcon(attachment.type)} text-gray-500 mr-2"></i>
+                            <span class="text-sm truncate">${attachment.name}</span>
+                            <span class="text-xs text-gray-400 ml-2">${formatFileSize(attachment.size)}</span>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="preview-attachment text-green-500 hover:text-green-700 p-1" data-id="${attachment.id}">
+                                <i class="fa fa-eye"></i>
+                            </button>
+                            <button class="download-attachment text-primary hover:text-blue-700 p-1" data-id="${attachment.id}">
+                                <i class="fa fa-download"></i>
+                            </button>
+                        </div>
+                    `;
+
+                    attachmentItem.querySelector('.preview-attachment').addEventListener('click', () => {
+                        openPreviewModal(attachment, attachments);
+                    });
+                    
+                    attachmentItem.querySelector('.download-attachment').addEventListener('click', () => {
+                        downloadAttachment(attachment);
+                    });
+
+                    detailAttachmentsList.appendChild(attachmentItem);
+                });
+            }
+
+            function openPreviewModal(attachment, attachmentsList) {
+                resetPreviewModal();
+                currentPdfDoc = null;
+                currentPdfPage = 1;
+                totalPdfPages = 1;
+                
+                previewAttachmentsList = [...attachmentsList];
+                currentPreviewIndex = previewAttachmentsList.findIndex(item => item.id === attachment.id);
+                currentPreviewAttachment = attachment;
+                
+                previewTitle.textContent = `预览：${attachment.name}`;
+                updateAttachmentNav();
+                
+                previewLoading.classList.remove('hidden');
+                previewModal.classList.remove('hidden');
+                
+                if (attachment.type.includes('image')) {
+                    setTimeout(() => {
+                        previewLoading.classList.add('hidden');
+                        previewImage.src = '';
+                        imageErrorMsg.classList.add('hidden');
+                        previewImageContainer.classList.remove('hidden');
+                        previewImage.src = attachment.previewUrl || attachment.data;
+                        previewImage.alt = attachment.name;
+                    }, 100);
+                    
+                } else if (attachment.type.includes('pdf')) {
+                    previewPDF(attachment);
+                    
+                } else if (attachment.type.includes('text') || 
+                           attachment.name.endsWith('.txt') || 
+                           attachment.name.endsWith('.md') || 
+                           attachment.name.endsWith('.json') || 
+                           attachment.name.endsWith('.js') || 
+                           attachment.name.endsWith('.html') ||
+                           attachment.name.endsWith('.css')) {
+                    previewTextFile(attachment);
+                    
+                } else {
+                    setTimeout(() => {
+                        previewLoading.classList.add('hidden');
+                        previewUnsupported.classList.remove('hidden');
+                    }, 100);
+                }
+            }
+
+            function updateAttachmentNav() {
+                if (previewAttachmentsList.length > 1) {
+                    attachmentIndex.textContent = `${currentPreviewIndex + 1}/${previewAttachmentsList.length}`;
+                    attachmentIndex.classList.remove('hidden');
+                } else {
+                    attachmentIndex.classList.add('hidden');
+                }
+                
+                prevAttachmentBtn.disabled = currentPreviewIndex === 0;
+                nextAttachmentBtn.disabled = currentPreviewIndex === previewAttachmentsList.length - 1;
+            }
+
+            function prevAttachment() {
+                if (currentPreviewIndex > 0) {
+                    currentPreviewIndex--;
+                    currentPreviewAttachment = previewAttachmentsList[currentPreviewIndex];
+                    openPreviewModal(currentPreviewAttachment, previewAttachmentsList);
+                }
+            }
+
+            function nextAttachment() {
+                if (currentPreviewIndex < previewAttachmentsList.length - 1) {
+                    currentPreviewIndex++;
+                    currentPreviewAttachment = previewAttachmentsList[currentPreviewIndex];
+                    openPreviewModal(currentPreviewAttachment, previewAttachmentsList);
+                }
+            }
+
+            function resetPreviewModal() {
+                previewLoading.classList.remove('hidden');
+                previewUnsupported.classList.add('hidden');
+                previewImageContainer.classList.add('hidden');
+                previewText.classList.add('hidden');
+                pdfPreviewContainer.classList.add('hidden');
+                
+                previewImage.src = '';
+                previewImage.alt = '';
+                imageErrorMsg.classList.add('hidden');
+                
+                previewText.textContent = '';
+                
+                pdfPrevBtn.disabled = true;
+                pdfNextBtn.disabled = true;
+                pdfPageInfo.textContent = '1/1';
+            }
+
+            function closePreviewModalFunc() {
+                previewModal.classList.add('hidden');
+                
+                if (currentPreviewAttachment && currentPreviewAttachment.type.includes('image')) {
+                    if (currentPreviewAttachment.previewUrl && currentPreviewAttachment.previewUrl !== currentPreviewAttachment.data) {
+                        URL.revokeObjectURL(currentPreviewAttachment.previewUrl);
+                    }
+                }
+                
+                currentPreviewAttachment = null;
+                previewAttachmentsList = [];
+                currentPreviewIndex = 0;
+                currentPdfDoc = null;
+            }
+
+            function previewPDF(attachment) {
+                try {
+                    const base64Data = attachment.data.split(',')[1];
+                    const uint8Array = new Uint8Array(atob(base64Data).split('').map(char => char.charCodeAt(0)));
+                    
+                    pdfjsLib.getDocument(uint8Array).promise.then(pdf => {
+                        currentPdfDoc = pdf;
+                        totalPdfPages = pdf.numPages;
+                        
+                        pdfPageInfo.textContent = `1/${totalPdfPages}`;
+                        pdfPrevBtn.disabled = currentPdfPage === 1;
+                        pdfNextBtn.disabled = currentPdfPage === totalPdfPages;
+                        
+                        renderPdfPage(1);
+                        
+                    }).catch(error => {
+                        console.error('PDF加载失败:', error);
+                        previewLoading.classList.add('hidden');
+                        previewUnsupported.classList.remove('hidden');
+                    });
+                } catch (error) {
+                    console.error('PDF预览失败:', error);
+                    previewLoading.classList.add('hidden');
+                    previewUnsupported.classList.remove('hidden');
+                }
+            }
+
+            function renderPdfPage(pageNum) {
+                if (!currentPdfDoc || pageNum < 1 || pageNum > totalPdfPages) return;
+                
+                currentPdfDoc.getPage(pageNum).then(page => {
+                    const viewport = page.getViewport({ scale: 1.5 });
+                    
+                    pdfPreviewCanvas.width = viewport.width;
+                    pdfPreviewCanvas.height = viewport.height;
+                    
+                    const renderContext = {
+                        canvasContext: pdfPreviewCanvas.getContext('2d'),
+                        viewport: viewport
+                    };
+                    
+                    page.render(renderContext).promise.then(() => {
+                        previewLoading.classList.add('hidden');
+                        pdfPreviewContainer.classList.remove('hidden');
+                        
+                        currentPdfPage = pageNum;
+                        pdfPageInfo.textContent = `${currentPdfPage}/${totalPdfPages}`;
+                        pdfPrevBtn.disabled = currentPdfPage === 1;
+                        pdfNextBtn.disabled = currentPdfPage === totalPdfPages;
+                    });
+                });
+            }
+
+            function pdfPrevPage() {
+                if (currentPdfPage > 1) {
+                    renderPdfPage(currentPdfPage - 1);
+                }
+            }
+
+            function pdfNextPage() {
+                if (currentPdfPage < totalPdfPages) {
+                    renderPdfPage(currentPdfPage + 1);
+                }
+            }
+
+            function previewTextFile(attachment) {
+                try {
+                    const base64Data = attachment.data.split(',')[1];
+                    const textContent = atob(base64Data);
+                    
+                    setTimeout(() => {
+                        previewLoading.classList.add('hidden');
+                        previewText.textContent = textContent;
+                        previewText.classList.remove('hidden');
+                    }, 100);
+                } catch (error) {
+                    console.error('文本预览失败:', error);
+                    previewLoading.classList.add('hidden');
+                    previewUnsupported.classList.remove('hidden');
+                }
+            }
+
+            function downloadAttachment(attachment) {
+                try {
+                    const link = document.createElement('a');
+                    link.href = attachment.data;
+                    link.download = attachment.name;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showNotification(`文件 ${attachment.name} 开始下载`);
+                } catch (error) {
+                    showNotification(`下载失败：${error.message}`, 'error');
+                }
+            }
+
+            function getFileIcon(fileType) {
+                if (fileType.includes('image')) return 'fa-file-image-o';
+                if (fileType.includes('pdf')) return 'fa-file-pdf-o';
+                if (fileType.includes('word') || fileType.includes('docx')) return 'fa-file-word-o';
+                if (fileType.includes('excel') || fileType.includes('xlsx')) return 'fa-file-excel-o';
+                if (fileType.includes('powerpoint') || fileType.includes('pptx')) return 'fa-file-powerpoint-o';
+                if (fileType.includes('text') || fileType.includes('plain')) return 'fa-file-text-o';
+                if (fileType.includes('zip') || fileType.includes('rar') || fileType.includes('7z')) return 'fa-file-archive-o';
+                if (fileType.includes('audio')) return 'fa-file-audio-o';
+                if (fileType.includes('video')) return 'fa-file-video-o';
+                return 'fa-file-o';
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+
             function setupEventListeners() {
-                // 新建笔记按钮
                 newNoteBtn.addEventListener('click', () => openModal());
                 emptyStateNewBtn.addEventListener('click', () => openModal());
 
-                // 模态框控制 - 核心改动1：移除点击外部关闭，仅保留按钮关闭
                 closeModal.addEventListener('click', () => closeModalFunc());
                 cancelBtn.addEventListener('click', () => closeModalFunc());
                 saveNoteBtn.addEventListener('click', () => saveNote());
                 deleteNoteBtn.addEventListener('click', () => deleteNote());
-                // 注释掉/删除这行：点击外部关闭的逻辑
-                // noteModal.addEventListener('click', (e) => { if (e.target === noteModal) closeModalFunc(); });
 
-                // 详情模态框控制 - 核心改动2：移除点击外部关闭，仅保留按钮关闭
                 closeDetailModal.addEventListener('click', () => closeDetailModalFunc());
                 editFromDetailBtn.addEventListener('click', () => {
                     closeDetailModalFunc();
                     openModal(currentNoteId);
                 });
-                // 注释掉/删除这行：点击外部关闭的逻辑
-                // detailModal.addEventListener('click', (e) => { if (e.target === detailModal) closeDetailModalFunc(); });
 
-                // 字体大小调整
+                closePreviewModal.addEventListener('click', () => closePreviewModalFunc());
+                downloadFromPreviewBtn.addEventListener('click', () => {
+                    if (currentPreviewAttachment) {
+                        downloadAttachment(currentPreviewAttachment);
+                    }
+                });
+                prevAttachmentBtn.addEventListener('click', prevAttachment);
+                nextAttachmentBtn.addEventListener('click', nextAttachment);
+                pdfPrevBtn.addEventListener('click', pdfPrevPage);
+                pdfNextBtn.addEventListener('click', pdfNextPage);
+
                 increaseFont.addEventListener('click', () => {
                     if (currentFontSize < 24) {
                         currentFontSize += 1;
@@ -274,13 +916,11 @@
                     }
                 });
 
-                // 搜索功能
                 searchInput.addEventListener('input', (e) => {
                     searchTerm = e.target.value.toLowerCase();
                     renderNotes();
                 });
 
-                // 键盘快捷键 - 核心改动3：仅保留Esc关闭（可选，若需要也可注释）
                 document.addEventListener('keydown', (e) => {
                     if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
                         e.preventDefault();
@@ -290,23 +930,36 @@
                         e.preventDefault();
                         saveNote();
                     }
-                    // 若想完全禁用Esc关闭，可注释下面这行
-                    if (e.key === 'Escape' && (!noteModal.classList.contains('hidden') || !detailModal.classList.contains('hidden'))) {
+                    if (e.key === 'Escape' && (!noteModal.classList.contains('hidden') || !detailModal.classList.contains('hidden') || !previewModal.classList.contains('hidden'))) {
                         e.preventDefault();
                         closeModalFunc();
                         closeDetailModalFunc();
+                        closePreviewModalFunc();
+                    }
+                    if (!previewModal.classList.contains('hidden')) {
+                        if (e.key === 'ArrowLeft') {
+                            if (pdfPreviewContainer.classList.contains('hidden') || currentPdfPage === 1) {
+                                prevAttachment();
+                            } else {
+                                pdfPrevPage();
+                            }
+                        } else if (e.key === 'ArrowRight') {
+                            if (pdfPreviewContainer.classList.contains('hidden') || currentPdfPage === totalPdfPages) {
+                                nextAttachment();
+                            } else {
+                                pdfNextPage();
+                            }
+                        }
                     }
                 });
             }
 
-            // 更新字体大小
             function updateFontSize() {
                 fontSizeDisplay.textContent = `${currentFontSize}px`;
                 document.documentElement.style.setProperty('--note-font-size', `${currentFontSize}px`);
                 localStorage.setItem('fontSize', currentFontSize);
             }
 
-            // 渲染笔记列表
             function renderNotes() {
                 notesGrid.innerHTML = '';
                 const filteredNotes = notes.filter(note => 
@@ -328,17 +981,23 @@
                 }
             }
 
-            // 创建笔记元素（核心：保留格式显示）
             function createNoteElement(note, index) {
                 const noteDiv = document.createElement('div');
                 noteDiv.className = `note-hover rounded-lg overflow-hidden animate-fade-in ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} note-shadow`;
                 noteDiv.style.animationDelay = `${index * 0.05}s`;
+
+                const attachmentCount = note.attachments ? note.attachments.length : 0;
+                const attachmentBadge = attachmentCount > 0 
+                    ? `<div class="flex items-center text-xs text-gray-500 mt-2">
+                          <i class="fa fa-paperclip mr-1"></i> ${attachmentCount} 个附件
+                       </div>` 
+                    : '';
                 
                 noteDiv.innerHTML = `
                     <div class="p-4" style="font-size: var(--note-font-size, 16px)">
                         <h3 class="font-semibold text-lg mb-2 truncate">${note.title || '无标题'}</h3>
-                        <!-- 关键改动：preserve-format-clamp 类保留格式并截断 -->
                         <p class="text-gray-600 preserve-format-clamp">${note.content || '无内容'}</p>
+                        ${attachmentBadge}
                     </div>
                     <div class="px-4 py-2 bg-gray-100 text-xs text-gray-500 flex justify-between items-center">
                         <span>${formatDate(note.updatedAt)}</span>
@@ -353,17 +1012,14 @@
                     </div>
                 `;
                 
-                // 详情按钮事件
                 noteDiv.querySelector('.view-note').addEventListener('click', (e) => {
                     e.stopPropagation();
                     openDetailModal(note.id);
                 });
-                // 编辑按钮事件
                 noteDiv.querySelector('.edit-note').addEventListener('click', (e) => {
                     e.stopPropagation();
                     openModal(note.id);
                 });
-                // 卡片点击默认打开详情
                 noteDiv.addEventListener('click', () => {
                     openDetailModal(note.id);
                 });
@@ -371,36 +1027,49 @@
                 return noteDiv;
             }
 
-            // 打开详情模态框
             function openDetailModal(noteId) {
                 currentNoteId = noteId;
                 const note = notes.find(n => n.id === noteId);
                 if (note) {
                     detailNoteTitle.textContent = note.title || '无标题';
-                    // 直接赋值，preserve-format 类会保留所有格式
                     detailNoteContent.textContent = note.content || '无内容';
                     detailNoteTime.textContent = `最后更新：${formatDate(note.updatedAt)}`;
+                    renderDetailAttachmentsList(note.attachments);
                     detailModal.classList.remove('hidden');
                 }
             }
 
-            // 关闭详情模态框
             function closeDetailModalFunc() {
                 detailModal.classList.add('hidden');
                 currentNoteId = null;
             }
 
-            // 打开编辑模态框
             function openModal(noteId = null) {
                 currentNoteId = noteId;
+                currentAttachments = [];
                 
                 if (noteId) {
                     const note = notes.find(n => n.id === noteId);
                     if (note) {
                         modalTitle.textContent = '编辑笔记';
                         noteTitle.value = note.title || '';
-                        // 编辑框也保留原始格式
                         noteContent.value = note.content || '';
+                        if (note.attachments) {
+                            currentAttachments = [...note.attachments];
+                            currentAttachments.forEach(att => {
+                                if (att.type.includes('image') && !att.previewUrl) {
+                                    const base64Data = att.data.split(',')[1];
+                                    const byteCharacters = atob(base64Data);
+                                    const byteNumbers = new Array(byteCharacters.length);
+                                    for (let i = 0; i < byteCharacters.length; i++) {
+                                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                    }
+                                    const byteArray = new Uint8Array(byteNumbers);
+                                    const file = new File([byteArray], att.name, { type: att.type });
+                                    att.previewUrl = URL.createObjectURL(file);
+                                }
+                            });
+                        }
                         deleteNoteBtn.classList.remove('hidden');
                     }
                 } else {
@@ -410,25 +1079,33 @@
                     deleteNoteBtn.classList.add('hidden');
                 }
                 
+                renderAttachmentsList();
                 noteModal.classList.remove('hidden');
                 noteTitle.focus();
             }
 
-            // 关闭编辑模态框
             function closeModalFunc() {
                 noteModal.classList.add('hidden');
                 currentNoteId = null;
                 noteTitle.value = '';
                 noteContent.value = '';
+                
+                currentAttachments.forEach(att => {
+                    if (att.type.includes('image') && att.previewUrl && att.previewUrl !== att.data) {
+                        URL.revokeObjectURL(att.previewUrl);
+                    }
+                });
+                
+                currentAttachments = [];
+                renderAttachmentsList();
             }
 
-            // 保存笔记
             function saveNote() {
                 const title = noteTitle.value.trim();
-                const content = noteContent.value; // 不trim，保留所有空格/换行
+                const content = noteContent.value;
                 
-                if (!title && !content.trim()) {
-                    showNotification('请输入笔记标题或内容', 'error');
+                if (!title && !content.trim() && currentAttachments.length === 0) {
+                    showNotification('请输入笔记标题/内容，或上传附件', 'error');
                     return;
                 }
                 
@@ -437,19 +1114,31 @@
                 if (currentNoteId) {
                     const noteIndex = notes.findIndex(n => n.id === currentNoteId);
                     if (noteIndex !== -1) {
+                        const cleanAttachments = currentAttachments.map(att => {
+                            const { previewUrl, ...cleanAtt } = att;
+                            return cleanAtt;
+                        });
+                        
                         notes[noteIndex] = {
                             ...notes[noteIndex],
                             title,
-                            content, // 完整保存原始内容
+                            content,
+                            attachments: cleanAttachments,
                             updatedAt: timestamp
                         };
                         showNotification('笔记已更新');
                     }
                 } else {
+                    const cleanAttachments = currentAttachments.map(att => {
+                        const { previewUrl, ...cleanAtt } = att;
+                        return cleanAtt;
+                    });
+                    
                     const newNote = {
                         id: generateId(),
                         title,
-                        content, // 完整保存原始内容
+                        content,
+                        attachments: cleanAttachments,
                         createdAt: timestamp,
                         updatedAt: timestamp
                     };
@@ -462,7 +1151,6 @@
                 closeModalFunc();
             }
 
-            // 删除笔记
             function deleteNote() {
                 if (currentNoteId) {
                     notes = notes.filter(n => n.id !== currentNoteId);
@@ -473,7 +1161,6 @@
                 }
             }
 
-            // 显示通知
             function showNotification(message, type = 'success') {
                 notificationText.textContent = message;
                 
@@ -494,12 +1181,10 @@
                 }, 3000);
             }
 
-            // 生成唯一ID
             function generateId() {
                 return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
             }
 
-            // 格式化日期
             function formatDate(dateString) {
                 const date = new Date(dateString);
                 const now = new Date();
@@ -512,7 +1197,6 @@
                 return date.toLocaleDateString('zh-CN');
             }
 
-            // 初始化应用
             initApp();
         });
     </script>

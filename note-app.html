@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黑白笔记 - 简洁高效的在线笔记工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#6B7280',
+                        dark: '#1F2937',
+                        light: '#F9FAFB'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.3s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-in-out'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .note-shadow {
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
+            .note-hover {
+                transition: all 0.3s ease;
+            }
+            .note-hover:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            }
+            .glass-effect {
+                background: rgba(255, 255, 255, 0.7);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between">
+            <div class="flex items-center mb-3 md:mb-0">
+                <i class="fa fa-book text-primary text-2xl mr-2"></i>
+                <h1 class="text-xl font-bold text-dark">黑白笔记</h1>
+            </div>
+            
+            <div class="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
+                <!-- 搜索框 -->
+                <div class="relative w-full md:w-64">
+                    <input type="text" id="searchInput" placeholder="搜索笔记..." 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <i class="fa fa-search absolute right-3 top-3 text-gray-400"></i>
+                </div>
+                
+                <!-- 字体大小调整 -->
+                <div class="flex items-center space-x-2">
+                    <button id="decreaseFont" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fa fa-font text-sm"></i>
+                    </button>
+                    <span id="fontSizeDisplay" class="text-sm font-medium">16px</span>
+                    <button id="increaseFont" class="p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fa fa-font"></i>
+                    </button>
+                </div>
+                
+                <!-- 新建笔记按钮 -->
+                <button id="newNoteBtn" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center">
+                    <i class="fa fa-plus mr-1"></i> 新建笔记
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-4 py-6">
+        <!-- 笔记网格 -->
+        <div id="notesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- 笔记将通过 JavaScript 动态添加 -->
+        </div>
+        
+        <!-- 空状态提示 -->
+        <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 text-center">
+            <i class="fa fa-sticky-note-o text-6xl text-gray-300 mb-4"></i>
+            <h2 class="text-xl font-medium text-gray-500 mb-2">还没有笔记</h2>
+            <p class="text-gray-400 mb-6">点击"新建笔记"开始记录你的想法</p>
+            <button id="emptyStateNewBtn" class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
+                <i class="fa fa-plus mr-2"></i> 创建第一篇笔记
+            </button>
+        </div>
+    </main>
+
+    <!-- 新建/编辑笔记模态框 -->
+    <div id="noteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 animate-fade-in">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 id="modalTitle" class="text-lg font-semibold">新建笔记</h2>
+                <button id="closeModal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-4">
+                <div class="mb-4">
+                    <label for="noteTitle" class="block text-sm font-medium text-gray-700 mb-1">标题</label>
+                    <input type="text" id="noteTitle" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="输入笔记标题...">
+                </div>
+                
+                <div class="mb-4">
+                    <label for="noteContent" class="block text-sm font-medium text-gray-700 mb-1">内容</label>
+                    <textarea id="noteContent" rows="6" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="输入笔记内容..."></textarea>
+                </div>
+            </div>
+            
+            <div class="p-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button id="deleteNoteBtn" class="px-4 py-2 text-red-600 border border-red-300 rounded-md hover:bg-red-50 transition-colors hidden">
+                    <i class="fa fa-trash mr-1"></i> 删除
+                </button>
+                <button id="cancelBtn" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                    取消
+                </button>
+                <button id="saveNoteBtn" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 transition-colors">
+                    保存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 笔记详情模态框 -->
+    <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 animate-fade-in">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 id="detailTitle" class="text-lg font-semibold">笔记详情</h2>
+                <button id="closeDetailModal" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="p-4" style="font-size: var(--note-font-size, 16px)">
+                <h3 id="detailNoteTitle" class="text-xl font-bold mb-4 text-gray-800"></h3>
+                <div id="detailNoteContent" class="text-gray-600 whitespace-pre-line"></div>
+            </div>
+            
+            <div class="p-4 border-t border-gray-200 flex justify-between items-center">
+                <span id="detailNoteTime" class="text-xs text-gray-500"></span>
+                <button id="editFromDetailBtn" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 transition-colors">
+                    <i class="fa fa-pencil mr-1"></i> 编辑
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg transform translate-y-16 opacity-0 transition-all duration-300 z-50 flex items-center">
+        <i id="notificationIcon" class="fa fa-check-circle mr-2"></i>
+        <span id="notificationText">操作成功</span>
+    </div>
+
+    <script>
+        // 笔记应用主逻辑
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM 元素
+            const notesGrid = document.getElementById('notesGrid');
+            const emptyState = document.getElementById('emptyState');
+            const newNoteBtn = document.getElementById('newNoteBtn');
+            const emptyStateNewBtn = document.getElementById('emptyStateNewBtn');
+            const noteModal = document.getElementById('noteModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const closeModal = document.getElementById('closeModal');
+            const cancelBtn = document.getElementById('cancelBtn');
+            const saveNoteBtn = document.getElementById('saveNoteBtn');
+            const deleteNoteBtn = document.getElementById('deleteNoteBtn');
+            const noteTitle = document.getElementById('noteTitle');
+            const noteContent = document.getElementById('noteContent');
+            const searchInput = document.getElementById('searchInput');
+            const increaseFont = document.getElementById('increaseFont');
+            const decreaseFont = document.getElementById('decreaseFont');
+            const fontSizeDisplay = document.getElementById('fontSizeDisplay');
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notificationText');
+            const notificationIcon = document.getElementById('notificationIcon');
+            // 详情模态框元素
+            const detailModal = document.getElementById('detailModal');
+            const closeDetailModal = document.getElementById('closeDetailModal');
+            const detailNoteTitle = document.getElementById('detailNoteTitle');
+            const detailNoteContent = document.getElementById('detailNoteContent');
+            const detailNoteTime = document.getElementById('detailNoteTime');
+            const editFromDetailBtn = document.getElementById('editFromDetailBtn');
+
+            // 应用状态
+            let notes = JSON.parse(localStorage.getItem('notes')) || [];
+            let currentNoteId = null;
+            let currentFontSize = parseInt(localStorage.getItem('fontSize')) || 16;
+            let searchTerm = '';
+
+            // 初始化应用
+            function initApp() {
+                updateFontSize();
+                renderNotes();
+                setupEventListeners();
+            }
+
+            // 设置事件监听器
+            function setupEventListeners() {
+                // 新建笔记按钮
+                newNoteBtn.addEventListener('click', () => openModal());
+                emptyStateNewBtn.addEventListener('click', () => openModal());
+
+                // 模态框控制
+                closeModal.addEventListener('click', () => closeModalFunc());
+                cancelBtn.addEventListener('click', () => closeModalFunc());
+                saveNoteBtn.addEventListener('click', () => saveNote());
+                deleteNoteBtn.addEventListener('click', () => deleteNote());
+                noteModal.addEventListener('click', (e) => {
+                    if (e.target === noteModal) closeModalFunc();
+                });
+
+                // 详情模态框控制
+                closeDetailModal.addEventListener('click', () => closeDetailModalFunc());
+                editFromDetailBtn.addEventListener('click', () => {
+                    closeDetailModalFunc();
+                    openModal(currentNoteId);
+                });
+                detailModal.addEventListener('click', (e) => {
+                    if (e.target === detailModal) closeDetailModalFunc();
+                });
+
+                // 字体大小调整
+                increaseFont.addEventListener('click', () => {
+                    if (currentFontSize < 24) {
+                        currentFontSize += 1;
+                        updateFontSize();
+                    }
+                });
+                decreaseFont.addEventListener('click', () => {
+                    if (currentFontSize > 12) {
+                        currentFontSize -= 1;
+                        updateFontSize();
+                    }
+                });
+
+                // 搜索功能
+                searchInput.addEventListener('input', (e) => {
+                    searchTerm = e.target.value.toLowerCase();
+                    renderNotes();
+                });
+
+                // 键盘快捷键
+                document.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                        e.preventDefault();
+                        openModal();
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.key === 's' && !noteModal.classList.contains('hidden')) {
+                        e.preventDefault();
+                        saveNote();
+                    }
+                    if (e.key === 'Escape' && (!noteModal.classList.contains('hidden') || !detailModal.classList.contains('hidden'))) {
+                        e.preventDefault();
+                        closeModalFunc();
+                        closeDetailModalFunc();
+                    }
+                });
+            }
+
+            // 更新字体大小
+            function updateFontSize() {
+                fontSizeDisplay.textContent = `${currentFontSize}px`;
+                document.documentElement.style.setProperty('--note-font-size', `${currentFontSize}px`);
+                localStorage.setItem('fontSize', currentFontSize);
+            }
+
+            // 渲染笔记列表
+            function renderNotes() {
+                notesGrid.innerHTML = '';
+                const filteredNotes = notes.filter(note => 
+                    note.title.toLowerCase().includes(searchTerm) || 
+                    note.content.toLowerCase().includes(searchTerm)
+                );
+                
+                if (filteredNotes.length === 0) {
+                    notesGrid.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                } else {
+                    notesGrid.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+                    
+                    filteredNotes.forEach((note, index) => {
+                        const noteElement = createNoteElement(note, index);
+                        notesGrid.appendChild(noteElement);
+                    });
+                }
+            }
+
+            // 创建笔记元素（核心改动：新增详情和编辑按钮）
+            function createNoteElement(note, index) {
+                const noteDiv = document.createElement('div');
+                noteDiv.className = `note-hover rounded-lg overflow-hidden animate-fade-in ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} note-shadow`;
+                noteDiv.style.animationDelay = `${index * 0.05}s`;
+                
+                noteDiv.innerHTML = `
+                    <div class="p-4" style="font-size: var(--note-font-size, 16px)">
+                        <h3 class="font-semibold text-lg mb-2 truncate">${note.title || '无标题'}</h3>
+                        <p class="text-gray-600 line-clamp-4">${note.content || '无内容'}</p>
+                    </div>
+                    <div class="px-4 py-2 bg-gray-100 text-xs text-gray-500 flex justify-between items-center">
+                        <span>${formatDate(note.updatedAt)}</span>
+                        <div class="flex space-x-2">
+                            <button class="view-note text-blue-500 hover:text-blue-700" data-id="${note.id}">
+                                <i class="fa fa-eye mr-1"></i>详情
+                            </button>
+                            <button class="edit-note text-primary hover:text-blue-700" data-id="${note.id}">
+                                <i class="fa fa-pencil mr-1"></i>编辑
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // 详情按钮事件
+                noteDiv.querySelector('.view-note').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openDetailModal(note.id);
+                });
+                // 编辑按钮事件
+                noteDiv.querySelector('.edit-note').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openModal(note.id);
+                });
+                // 卡片点击默认打开详情
+                noteDiv.addEventListener('click', () => {
+                    openDetailModal(note.id);
+                });
+                
+                return noteDiv;
+            }
+
+            // 打开详情模态框
+            function openDetailModal(noteId) {
+                currentNoteId = noteId;
+                const note = notes.find(n => n.id === noteId);
+                if (note) {
+                    detailNoteTitle.textContent = note.title || '无标题';
+                    detailNoteContent.textContent = note.content || '无内容';
+                    detailNoteTime.textContent = `最后更新：${formatDate(note.updatedAt)}`;
+                    detailModal.classList.remove('hidden');
+                }
+            }
+
+            // 关闭详情模态框
+            function closeDetailModalFunc() {
+                detailModal.classList.add('hidden');
+                currentNoteId = null;
+            }
+
+            // 打开编辑模态框
+            function openModal(noteId = null) {
+                currentNoteId = noteId;
+                
+                if (noteId) {
+                    const note = notes.find(n => n.id === noteId);
+                    if (note) {
+                        modalTitle.textContent = '编辑笔记';
+                        noteTitle.value = note.title || '';
+                        noteContent.value = note.content || '';
+                        deleteNoteBtn.classList.remove('hidden');
+                    }
+                } else {
+                    modalTitle.textContent = '新建笔记';
+                    noteTitle.value = '';
+                    noteContent.value = '';
+                    deleteNoteBtn.classList.add('hidden');
+                }
+                
+                noteModal.classList.remove('hidden');
+                noteTitle.focus();
+            }
+
+            // 关闭编辑模态框
+            function closeModalFunc() {
+                noteModal.classList.add('hidden');
+                currentNoteId = null;
+                noteTitle.value = '';
+                noteContent.value = '';
+            }
+
+            // 保存笔记
+            function saveNote() {
+                const title = noteTitle.value.trim();
+                const content = noteContent.value.trim();
+                
+                if (!title && !content) {
+                    showNotification('请输入笔记标题或内容', 'error');
+                    return;
+                }
+                
+                const timestamp = new Date().toISOString();
+                
+                if (currentNoteId) {
+                    const noteIndex = notes.findIndex(n => n.id === currentNoteId);
+                    if (noteIndex !== -1) {
+                        notes[noteIndex] = {
+                            ...notes[noteIndex],
+                            title,
+                            content,
+                            updatedAt: timestamp
+                        };
+                        showNotification('笔记已更新');
+                    }
+                } else {
+                    const newNote = {
+                        id: generateId(),
+                        title,
+                        content,
+                        createdAt: timestamp,
+                        updatedAt: timestamp
+                    };
+                    notes.unshift(newNote);
+                    showNotification('笔记已创建');
+                }
+                
+                localStorage.setItem('notes', JSON.stringify(notes));
+                renderNotes();
+                closeModalFunc();
+            }
+
+            // 删除笔记
+            function deleteNote() {
+                if (currentNoteId) {
+                    notes = notes.filter(n => n.id !== currentNoteId);
+                    localStorage.setItem('notes', JSON.stringify(notes));
+                    renderNotes();
+                    closeModalFunc();
+                    showNotification('笔记已删除', 'error');
+                }
+            }
+
+            // 显示通知
+            function showNotification(message, type = 'success') {
+                notificationText.textContent = message;
+                
+                if (type === 'success') {
+                    notification.classList.remove('bg-red-500');
+                    notification.classList.add('bg-green-500');
+                    notificationIcon.className = 'fa fa-check-circle mr-2';
+                } else {
+                    notification.classList.remove('bg-green-500');
+                    notification.classList.add('bg-red-500');
+                    notificationIcon.className = 'fa fa-exclamation-circle mr-2';
+                }
+                
+                notification.classList.remove('translate-y-16', 'opacity-0');
+                
+                setTimeout(() => {
+                    notification.classList.add('translate-y-16', 'opacity-0');
+                }, 3000);
+            }
+
+            // 生成唯一ID
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+            }
+
+            // 格式化日期
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diff = now - date;
+                
+                if (diff < 60000) return '刚刚';
+                if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+                if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+                if (diff < 2592000000) return `${Math.floor(diff / 86400000)}天前`;
+                return date.toLocaleDateString('zh-CN');
+            }
+
+            // 初始化应用
+            initApp();
+        });
+    </script>
+</body>
+</html>

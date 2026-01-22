@@ -111,21 +111,24 @@
                 height: 70vh;
                 position: relative;
                 overflow-y: auto;
-                padding-bottom: 60px;
+                /* 移除底部padding，因为按钮不再占用底部空间 */
+                padding-bottom: 0;
             }
+            /* 修改后的PDF翻页按钮样式 - 固定在右下角 */
             .pdf-nav {
-                position: absolute;
-                bottom: 0;
-                left: 0;
-                width: 100%;
+                position: fixed; /* 改为fixed定位，相对于容器 */
+                bottom: 20px;
+                right: 20px;
+                width: auto; /* 宽度自适应 */
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 gap: 10px;
                 background: rgba(255, 255, 255, 0.95);
-                padding: 10px 0;
-                border-top: 1px solid #e5e7eb;
-                box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+                padding: 8px 16px; /* 调整内边距 */
+                border-radius: 30px; /* 圆角 */
+                border-top: none; /* 移除上边框 */
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* 增强阴影 */
                 z-index: 10;
             }
             .pdf-nav-btn {
@@ -151,6 +154,7 @@
                 color: #4b5563;
                 min-width: 60px;
                 text-align: center;
+                font-weight: 500;
             }
             .attachment-nav {
                 position: absolute;
@@ -487,6 +491,7 @@
                     <pre id="previewText" class="preview-text w-full p-4 bg-gray-50 rounded-md border border-gray-200 hidden"></pre>
                     <div id="pdf-preview-container" class="hidden">
                         <canvas id="pdf-preview-canvas"></canvas>
+                        <!-- PDF翻页按钮容器 - 现在固定在右下角 -->
                         <div class="pdf-nav">
                             <button id="pdf-prev-btn" class="pdf-nav-btn" disabled>
                                 <i class="fa fa-chevron-left text-primary"></i>

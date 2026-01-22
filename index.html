@@ -196,6 +196,65 @@
                 margin-top: 10px;
                 font-size: 14px;
             }
+            /* 分类相关样式 */
+            .category-sidebar {
+                width: 240px;
+                background: white;
+                border-right: 1px solid #e5e7eb;
+                height: calc(100vh - 64px);
+                position: sticky;
+                top: 64px;
+                overflow-y: auto;
+            }
+            .category-item {
+                padding: 0.75rem 1rem;
+                cursor: pointer;
+                transition: background-color 0.2s;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .category-item:hover {
+                background-color: #f3f4f6;
+            }
+            .category-item.active {
+                background-color: #eff6ff;
+                color: #3B82F6;
+                font-weight: 500;
+            }
+            .category-actions {
+                opacity: 0;
+                transition: opacity 0.2s;
+                display: flex;
+                gap: 0.5rem;
+            }
+            .category-item:hover .category-actions {
+                opacity: 1;
+            }
+            .category-edit-input {
+                width: 100%;
+                padding: 0.5rem;
+                border: 1px solid #d1d5db;
+                border-radius: 0.375rem;
+                outline: none;
+            }
+            .category-edit-input:focus {
+                border-color: #3B82F6;
+                ring: 2px solid #3B82F6;
+            }
+            .main-content {
+                flex: 1;
+                padding: 0 1rem;
+            }
+            .layout-container {
+                display: flex;
+                gap: 1rem;
+            }
+            @media (max-width: 768px) {
+                .category-sidebar {
+                    width: 200px;
+                }
+            }
         }
     </style>
 </head>
@@ -232,19 +291,69 @@
         </div>
     </header>
 
-    <main class="container mx-auto px-4 py-6">
-        <div id="notesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        </div>
-        
-        <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 text-center">
-            <i class="fa fa-sticky-note-o text-6xl text-gray-300 mb-4"></i>
-            <h2 class="text-xl font-medium text-gray-500 mb-2">还没有笔记</h2>
-            <p class="text-gray-400 mb-6">点击"新建笔记"开始记录你的想法</p>
-            <button id="emptyStateNewBtn" class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
-                <i class="fa fa-plus mr-2"></i> 创建第一篇笔记
-            </button>
-        </div>
-    </main>
+    <!-- 主体布局：分类侧边栏 + 笔记内容 -->
+    <div class="container mx-auto px-4 py-6 layout-container">
+        <!-- 分类侧边栏 -->
+        <aside class="category-sidebar p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-dark">笔记分类</h2>
+                <button id="addCategoryBtn" class="text-primary hover:text-blue-700">
+                    <i class="fa fa-plus-circle"></i> 新增
+                </button>
+            </div>
+            
+            <!-- 未分类 -->
+            <div class="category-item active" data-id="uncategorized">
+                <span><i class="fa fa-folder-o mr-2"></i> 未分类</span>
+            </div>
+            
+            <!-- 分类列表 -->
+            <div id="categoriesList" class="mt-2">
+                <!-- 分类项动态生成 -->
+            </div>
+            
+            <!-- 新增/编辑分类弹窗 -->
+            <div id="categoryModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+                <div class="bg-white rounded-lg shadow-xl w-full max-w-sm mx-4 animate-fade-in">
+                    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                        <h2 id="categoryModalTitle" class="text-lg font-semibold">新增分类</h2>
+                        <button id="closeCategoryModal" class="text-gray-400 hover:text-gray-600">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="p-4">
+                        <div class="mb-4">
+                            <label for="categoryName" class="block text-sm font-medium text-gray-700 mb-1">分类名称</label>
+                            <input type="text" id="categoryName" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="输入分类名称...">
+                        </div>
+                    </div>
+                    <div class="p-4 border-t border-gray-200 flex justify-end space-x-3">
+                        <button id="cancelCategoryBtn" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                            取消
+                        </button>
+                        <button id="saveCategoryBtn" class="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 transition-colors">
+                            保存
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 笔记主内容区 -->
+        <main class="main-content">
+            <div id="notesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            </div>
+            
+            <div id="emptyState" class="hidden flex flex-col items-center justify-center py-16 text-center">
+                <i class="fa fa-sticky-note-o text-6xl text-gray-300 mb-4"></i>
+                <h2 class="text-xl font-medium text-gray-500 mb-2">还没有笔记</h2>
+                <p class="text-gray-400 mb-6">点击"新建笔记"开始记录你的想法</p>
+                <button id="emptyStateNewBtn" class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
+                    <i class="fa fa-plus mr-2"></i> 创建第一篇笔记
+                </button>
+            </div>
+        </main>
+    </div>
 
     <div id="noteModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4 animate-fade-in max-h-[90vh] overflow-y-auto">
@@ -256,6 +365,15 @@
             </div>
             
             <div class="p-4">
+                <!-- 新增分类选择 -->
+                <div class="mb-4">
+                    <label for="noteCategory" class="block text-sm font-medium text-gray-700 mb-1">所属分类</label>
+                    <select id="noteCategory" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="uncategorized">未分类</option>
+                        <!-- 分类选项动态生成 -->
+                    </select>
+                </div>
+                
                 <div class="mb-4">
                     <label for="noteTitle" class="block text-sm font-medium text-gray-700 mb-1">标题</label>
                     <input type="text" id="noteTitle" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="输入笔记标题...">
@@ -305,6 +423,11 @@
             </div>
             
             <div class="p-4" style="font-size: var(--note-font-size, 16px)">
+                <!-- 显示笔记所属分类 -->
+                <div class="mb-2 text-sm text-gray-500">
+                    <span><i class="fa fa-folder-o mr-1"></i> <span id="detailNoteCategory">未分类</span></span>
+                </div>
+                
                 <h3 id="detailNoteTitle" class="text-xl font-bold mb-4 text-gray-800"></h3>
                 <div id="detailNoteContent" class="text-gray-600 preserve-format mb-6"></div>
                 
@@ -437,7 +560,20 @@
             const nextAttachmentBtn = document.getElementById('nextAttachmentBtn');
             const attachmentIndex = document.getElementById('attachmentIndex');
             
+            // 分类相关元素
+            const categoriesList = document.getElementById('categoriesList');
+            const addCategoryBtn = document.getElementById('addCategoryBtn');
+            const categoryModal = document.getElementById('categoryModal');
+            const closeCategoryModal = document.getElementById('closeCategoryModal');
+            const cancelCategoryBtn = document.getElementById('cancelCategoryBtn');
+            const saveCategoryBtn = document.getElementById('saveCategoryBtn');
+            const categoryNameInput = document.getElementById('categoryName');
+            const categoryModalTitle = document.getElementById('categoryModalTitle');
+            const noteCategorySelect = document.getElementById('noteCategory');
+            const detailNoteCategory = document.getElementById('detailNoteCategory');
+            
             let notes = JSON.parse(localStorage.getItem('notes')) || [];
+            let categories = JSON.parse(localStorage.getItem('categories')) || [];
             let currentNoteId = null;
             let currentFontSize = parseInt(localStorage.getItem('fontSize')) || 16;
             let searchTerm = '';
@@ -448,14 +584,218 @@
             let currentPdfDoc = null;
             let currentPdfPage = 1;
             let totalPdfPages = 1;
+            let currentCategoryId = 'uncategorized'; // 当前选中的分类ID
+            let currentEditingCategoryId = null; // 当前编辑的分类ID
 
             function initApp() {
                 updateFontSize();
+                renderCategories();
                 renderNotes();
                 setupEventListeners();
                 setupFileUpload();
                 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
                 setupImageErrorHandling();
+                setupCategoryEventListeners();
+            }
+
+            // 初始化分类相关事件监听
+            function setupCategoryEventListeners() {
+                // 新增分类
+                addCategoryBtn.addEventListener('click', () => {
+                    currentEditingCategoryId = null;
+                    categoryModalTitle.textContent = '新增分类';
+                    categoryNameInput.value = '';
+                    categoryModal.classList.remove('hidden');
+                });
+
+                // 关闭分类弹窗
+                closeCategoryModal.addEventListener('click', () => {
+                    categoryModal.classList.add('hidden');
+                });
+
+                cancelCategoryBtn.addEventListener('click', () => {
+                    categoryModal.classList.add('hidden');
+                });
+
+                // 保存分类
+                saveCategoryBtn.addEventListener('click', saveCategory);
+
+                // 未分类项点击
+                document.querySelector('.category-item[data-id="uncategorized"]').addEventListener('click', () => {
+                    selectCategory('uncategorized');
+                });
+
+                // 键盘事件：按回车保存分类
+                categoryNameInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        saveCategory();
+                    }
+                });
+            }
+
+            // 渲染分类列表
+            function renderCategories() {
+                categoriesList.innerHTML = '';
+                
+                categories.forEach(category => {
+                    const categoryItem = document.createElement('div');
+                    categoryItem.className = `category-item ${currentCategoryId === category.id ? 'active' : ''}`;
+                    categoryItem.dataset.id = category.id;
+                    categoryItem.innerHTML = `
+                        <span><i class="fa fa-folder-o mr-2"></i> ${category.name}</span>
+                        <div class="category-actions">
+                            <button class="edit-category text-blue-500 hover:text-blue-700" data-id="${category.id}">
+                                <i class="fa fa-pencil"></i>
+                            </button>
+                            <button class="delete-category text-red-500 hover:text-red-700" data-id="${category.id}">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+
+                    // 分类点击事件
+                    categoryItem.addEventListener('click', (e) => {
+                        if (!e.target.closest('.category-actions')) {
+                            selectCategory(category.id);
+                        }
+                    });
+
+                    // 编辑分类
+                    categoryItem.querySelector('.edit-category').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        editCategory(category.id);
+                    });
+
+                    // 删除分类
+                    categoryItem.querySelector('.delete-category').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteCategory(category.id);
+                    });
+
+                    categoriesList.appendChild(categoryItem);
+                });
+
+                // 更新笔记弹窗中的分类选择器
+                updateNoteCategorySelect();
+            }
+
+            // 更新笔记分类选择器
+            function updateNoteCategorySelect() {
+                // 保留未分类选项
+                const uncategorizedOption = noteCategorySelect.querySelector('option[value="uncategorized"]');
+                noteCategorySelect.innerHTML = '';
+                noteCategorySelect.appendChild(uncategorizedOption);
+
+                // 添加自定义分类
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = category.name;
+                    noteCategorySelect.appendChild(option);
+                });
+
+                // 设置当前选中的分类
+                if (currentNoteId) {
+                    const note = notes.find(n => n.id === currentNoteId);
+                    if (note && note.categoryId) {
+                        noteCategorySelect.value = note.categoryId;
+                    } else {
+                        noteCategorySelect.value = currentCategoryId;
+                    }
+                } else {
+                    noteCategorySelect.value = currentCategoryId;
+                }
+            }
+
+            // 选择分类
+            function selectCategory(categoryId) {
+                // 移除所有激活状态
+                document.querySelectorAll('.category-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                // 添加当前分类激活状态
+                document.querySelector(`.category-item[data-id="${categoryId}"]`).classList.add('active');
+                currentCategoryId = categoryId;
+                // 重新渲染笔记
+                renderNotes();
+            }
+
+            // 保存分类
+            function saveCategory() {
+                const name = categoryNameInput.value.trim();
+                if (!name) {
+                    showNotification('分类名称不能为空', 'error');
+                    return;
+                }
+
+                // 检查分类名称是否重复
+                const isDuplicate = categories.some(cat => cat.name === name && cat.id !== currentEditingCategoryId);
+                if (isDuplicate) {
+                    showNotification('该分类名称已存在', 'error');
+                    return;
+                }
+
+                if (currentEditingCategoryId) {
+                    // 编辑现有分类
+                    const index = categories.findIndex(cat => cat.id === currentEditingCategoryId);
+                    if (index !== -1) {
+                        categories[index].name = name;
+                        showNotification('分类修改成功');
+                    }
+                } else {
+                    // 新增分类
+                    const newCategory = {
+                        id: generateId(),
+                        name: name,
+                        createTime: new Date().toISOString()
+                    };
+                    categories.push(newCategory);
+                    showNotification('分类创建成功');
+                }
+
+                // 保存到本地存储
+                localStorage.setItem('categories', JSON.stringify(categories));
+                // 重新渲染分类列表
+                renderCategories();
+                // 关闭弹窗
+                categoryModal.classList.add('hidden');
+            }
+
+            // 编辑分类
+            function editCategory(categoryId) {
+                const category = categories.find(cat => cat.id === categoryId);
+                if (category) {
+                    currentEditingCategoryId = categoryId;
+                    categoryModalTitle.textContent = '编辑分类';
+                    categoryNameInput.value = category.name;
+                    categoryModal.classList.remove('hidden');
+                }
+            }
+
+            // 删除分类
+            function deleteCategory(categoryId) {
+                if (confirm('确定要删除该分类吗？该分类下的所有笔记将移至未分类')) {
+                    // 将该分类下的笔记移至未分类
+                    notes.forEach(note => {
+                        if (note.categoryId === categoryId) {
+                            note.categoryId = 'uncategorized';
+                        }
+                    });
+                    localStorage.setItem('notes', JSON.stringify(notes));
+
+                    // 删除分类
+                    categories = categories.filter(cat => cat.id !== categoryId);
+                    localStorage.setItem('categories', JSON.stringify(categories));
+                    
+                    // 如果删除的是当前选中的分类，切换到未分类
+                    if (currentCategoryId === categoryId) {
+                        selectCategory('uncategorized');
+                    }
+
+                    renderCategories();
+                    renderNotes();
+                    showNotification('分类已删除，相关笔记已移至未分类');
+                }
             }
 
             function setupImageErrorHandling() {
@@ -749,94 +1089,63 @@
 
             function closePreviewModalFunc() {
                 previewModal.classList.add('hidden');
-                
-                if (currentPreviewAttachment && currentPreviewAttachment.type.includes('image')) {
-                    if (currentPreviewAttachment.previewUrl && currentPreviewAttachment.previewUrl !== currentPreviewAttachment.data) {
-                        URL.revokeObjectURL(currentPreviewAttachment.previewUrl);
-                    }
-                }
-                
-                currentPreviewAttachment = null;
-                previewAttachmentsList = [];
-                currentPreviewIndex = 0;
-                currentPdfDoc = null;
             }
 
             function previewPDF(attachment) {
-                try {
-                    const base64Data = attachment.data.split(',')[1];
-                    const uint8Array = new Uint8Array(atob(base64Data).split('').map(char => char.charCodeAt(0)));
+                const loadingTask = pdfjsLib.getDocument({
+                    data: atob(attachment.data.split(',')[1])
+                });
+
+                loadingTask.promise.then(pdfDoc => {
+                    currentPdfDoc = pdfDoc;
+                    totalPdfPages = pdfDoc.numPages;
+                    pdfPageInfo.textContent = `1/${totalPdfPages}`;
                     
-                    pdfjsLib.getDocument(uint8Array).promise.then(pdf => {
-                        currentPdfDoc = pdf;
-                        totalPdfPages = pdf.numPages;
-                        
-                        pdfPageInfo.textContent = `1/${totalPdfPages}`;
-                        pdfPrevBtn.disabled = currentPdfPage === 1;
-                        pdfNextBtn.disabled = currentPdfPage === totalPdfPages;
-                        
-                        renderPdfPage(1);
-                        
-                    }).catch(error => {
-                        console.error('PDF加载失败:', error);
-                        previewLoading.classList.add('hidden');
-                        previewUnsupported.classList.remove('hidden');
-                    });
-                } catch (error) {
-                    console.error('PDF预览失败:', error);
+                    pdfNextBtn.disabled = totalPdfPages <= 1;
+                    pdfPrevBtn.disabled = true;
+                    
+                    renderPdfPage(1);
+                    
+                    previewLoading.classList.add('hidden');
+                    pdfPreviewContainer.classList.remove('hidden');
+                }).catch(error => {
+                    console.error('PDF加载失败:', error);
                     previewLoading.classList.add('hidden');
                     previewUnsupported.classList.remove('hidden');
-                }
-            }
-
-            function renderPdfPage(pageNum) {
-                if (!currentPdfDoc || pageNum < 1 || pageNum > totalPdfPages) return;
-                
-                currentPdfDoc.getPage(pageNum).then(page => {
-                    const viewport = page.getViewport({ scale: 1.5 });
-                    
-                    pdfPreviewCanvas.width = viewport.width;
-                    pdfPreviewCanvas.height = viewport.height;
-                    
-                    const renderContext = {
-                        canvasContext: pdfPreviewCanvas.getContext('2d'),
-                        viewport: viewport
-                    };
-                    
-                    page.render(renderContext).promise.then(() => {
-                        previewLoading.classList.add('hidden');
-                        pdfPreviewContainer.classList.remove('hidden');
-                        
-                        currentPdfPage = pageNum;
-                        pdfPageInfo.textContent = `${currentPdfPage}/${totalPdfPages}`;
-                        pdfPrevBtn.disabled = currentPdfPage === 1;
-                        pdfNextBtn.disabled = currentPdfPage === totalPdfPages;
-                    });
+                    showNotification('PDF预览失败，请下载查看', 'error');
                 });
             }
 
-            function pdfPrevPage() {
-                if (currentPdfPage > 1) {
-                    renderPdfPage(currentPdfPage - 1);
-                }
-            }
-
-            function pdfNextPage() {
-                if (currentPdfPage < totalPdfPages) {
-                    renderPdfPage(currentPdfPage + 1);
-                }
+            function renderPdfPage(pageNum) {
+                currentPdfDoc.getPage(pageNum).then(page => {
+                    const viewport = page.getViewport({ scale: 1.5 });
+                    const canvas = pdfPreviewCanvas;
+                    const context = canvas.getContext('2d');
+                    
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    
+                    page.render(renderContext);
+                    
+                    pdfPageInfo.textContent = `${pageNum}/${totalPdfPages}`;
+                    pdfPrevBtn.disabled = pageNum <= 1;
+                    pdfNextBtn.disabled = pageNum >= totalPdfPages;
+                });
             }
 
             function previewTextFile(attachment) {
                 try {
                     const base64Data = attachment.data.split(',')[1];
-                    const textContent = atob(base64Data);
+                    const text = atob(base64Data);
                     
-                    setTimeout(() => {
-                        previewLoading.classList.add('hidden');
-                        previewText.textContent = textContent;
-                        previewText.classList.remove('hidden');
-                    }, 100);
+                    previewLoading.classList.add('hidden');
+                    previewText.classList.remove('hidden');
+                    previewText.textContent = text;
                 } catch (error) {
                     console.error('文本预览失败:', error);
                     previewLoading.classList.add('hidden');
@@ -845,356 +1154,316 @@
             }
 
             function downloadAttachment(attachment) {
-                try {
-                    const link = document.createElement('a');
-                    link.href = attachment.data;
-                    link.download = attachment.name;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    showNotification(`文件 ${attachment.name} 开始下载`);
-                } catch (error) {
-                    showNotification(`下载失败：${error.message}`, 'error');
-                }
+                const link = document.createElement('a');
+                link.href = attachment.data;
+                link.download = attachment.name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showNotification(`文件 ${attachment.name} 开始下载`);
             }
 
             function getFileIcon(fileType) {
                 if (fileType.includes('image')) return 'fa-file-image-o';
                 if (fileType.includes('pdf')) return 'fa-file-pdf-o';
-                if (fileType.includes('word') || fileType.includes('docx')) return 'fa-file-word-o';
-                if (fileType.includes('excel') || fileType.includes('xlsx')) return 'fa-file-excel-o';
-                if (fileType.includes('powerpoint') || fileType.includes('pptx')) return 'fa-file-powerpoint-o';
-                if (fileType.includes('text') || fileType.includes('plain')) return 'fa-file-text-o';
-                if (fileType.includes('zip') || fileType.includes('rar') || fileType.includes('7z')) return 'fa-file-archive-o';
+                if (fileType.includes('text')) return 'fa-file-text-o';
                 if (fileType.includes('audio')) return 'fa-file-audio-o';
                 if (fileType.includes('video')) return 'fa-file-video-o';
+                if (fileType.includes('zip') || fileType.includes('archive')) return 'fa-file-archive-o';
                 return 'fa-file-o';
             }
 
             function formatFileSize(bytes) {
                 if (bytes < 1024) return bytes + ' B';
-                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / 1048576).toFixed(1) + ' MB';
             }
 
-            function setupEventListeners() {
-                newNoteBtn.addEventListener('click', () => openModal());
-                emptyStateNewBtn.addEventListener('click', () => openModal());
-
-                closeModal.addEventListener('click', () => closeModalFunc());
-                cancelBtn.addEventListener('click', () => closeModalFunc());
-                saveNoteBtn.addEventListener('click', () => saveNote());
-                deleteNoteBtn.addEventListener('click', () => deleteNote());
-
-                closeDetailModal.addEventListener('click', () => closeDetailModalFunc());
-                editFromDetailBtn.addEventListener('click', () => {
-                    closeDetailModalFunc();
-                    openModal(currentNoteId);
-                });
-
-                closePreviewModal.addEventListener('click', () => closePreviewModalFunc());
-                downloadFromPreviewBtn.addEventListener('click', () => {
-                    if (currentPreviewAttachment) {
-                        downloadAttachment(currentPreviewAttachment);
-                    }
-                });
-                prevAttachmentBtn.addEventListener('click', prevAttachment);
-                nextAttachmentBtn.addEventListener('click', nextAttachment);
-                pdfPrevBtn.addEventListener('click', pdfPrevPage);
-                pdfNextBtn.addEventListener('click', pdfNextPage);
-
-                increaseFont.addEventListener('click', () => {
-                    if (currentFontSize < 24) {
-                        currentFontSize += 1;
-                        updateFontSize();
-                    }
-                });
-                decreaseFont.addEventListener('click', () => {
-                    if (currentFontSize > 12) {
-                        currentFontSize -= 1;
-                        updateFontSize();
-                    }
-                });
-
-                searchInput.addEventListener('input', (e) => {
-                    searchTerm = e.target.value.toLowerCase();
-                    renderNotes();
-                });
-
-                document.addEventListener('keydown', (e) => {
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-                        e.preventDefault();
-                        openModal();
-                    }
-                    if ((e.ctrlKey || e.metaKey) && e.key === 's' && !noteModal.classList.contains('hidden')) {
-                        e.preventDefault();
-                        saveNote();
-                    }
-                    if (e.key === 'Escape' && (!noteModal.classList.contains('hidden') || !detailModal.classList.contains('hidden') || !previewModal.classList.contains('hidden'))) {
-                        e.preventDefault();
-                        closeModalFunc();
-                        closeDetailModalFunc();
-                        closePreviewModalFunc();
-                    }
-                    if (!previewModal.classList.contains('hidden')) {
-                        if (e.key === 'ArrowLeft') {
-                            if (pdfPreviewContainer.classList.contains('hidden') || currentPdfPage === 1) {
-                                prevAttachment();
-                            } else {
-                                pdfPrevPage();
-                            }
-                        } else if (e.key === 'ArrowRight') {
-                            if (pdfPreviewContainer.classList.contains('hidden') || currentPdfPage === totalPdfPages) {
-                                nextAttachment();
-                            } else {
-                                pdfNextPage();
-                            }
-                        }
-                    }
-                });
-            }
-
-            function updateFontSize() {
-                fontSizeDisplay.textContent = `${currentFontSize}px`;
-                document.documentElement.style.setProperty('--note-font-size', `${currentFontSize}px`);
-                localStorage.setItem('fontSize', currentFontSize);
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
             }
 
             function renderNotes() {
-                notesGrid.innerHTML = '';
-                const filteredNotes = notes.filter(note => 
-                    note.title.toLowerCase().includes(searchTerm) || 
-                    note.content.toLowerCase().includes(searchTerm)
-                );
-                
+                // 过滤当前分类的笔记
+                let filteredNotes = notes.filter(note => {
+                    // 如果是未分类，只显示categoryId为uncategorized或没有categoryId的笔记
+                    if (currentCategoryId === 'uncategorized') {
+                        return !note.categoryId || note.categoryId === 'uncategorized';
+                    }
+                    // 否则显示对应分类的笔记
+                    return note.categoryId === currentCategoryId;
+                });
+
+                // 搜索过滤
+                if (searchTerm) {
+                    filteredNotes = filteredNotes.filter(note => 
+                        note.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        note.content.toLowerCase().includes(searchTerm.toLowerCase())
+                    );
+                }
+
                 if (filteredNotes.length === 0) {
                     notesGrid.classList.add('hidden');
                     emptyState.classList.remove('hidden');
-                } else {
-                    notesGrid.classList.remove('hidden');
-                    emptyState.classList.add('hidden');
-                    
-                    filteredNotes.forEach((note, index) => {
-                        const noteElement = createNoteElement(note, index);
-                        notesGrid.appendChild(noteElement);
-                    });
+                    return;
                 }
-            }
 
-            function createNoteElement(note, index) {
-                const noteDiv = document.createElement('div');
-                noteDiv.className = `note-hover rounded-lg overflow-hidden animate-fade-in ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} note-shadow`;
-                noteDiv.style.animationDelay = `${index * 0.05}s`;
+                notesGrid.classList.remove('hidden');
+                emptyState.classList.add('hidden');
 
-                const attachmentCount = note.attachments ? note.attachments.length : 0;
-                const attachmentBadge = attachmentCount > 0 
-                    ? `<div class="flex items-center text-xs text-gray-500 mt-2">
-                          <i class="fa fa-paperclip mr-1"></i> ${attachmentCount} 个附件
-                       </div>` 
-                    : '';
-                
-                noteDiv.innerHTML = `
-                    <div class="p-4" style="font-size: var(--note-font-size, 16px)">
-                        <h3 class="font-semibold text-lg mb-2 truncate">${note.title || '无标题'}</h3>
-                        <p class="text-gray-600 preserve-format-clamp">${note.content || '无内容'}</p>
-                        ${attachmentBadge}
-                    </div>
-                    <div class="px-4 py-2 bg-gray-100 text-xs text-gray-500 flex justify-between items-center">
-                        <span>${formatDate(note.updatedAt)}</span>
-                        <div class="flex space-x-2">
-                            <button class="view-note text-blue-500 hover:text-blue-700" data-id="${note.id}">
-                                <i class="fa fa-eye mr-1"></i>详情
+                notesGrid.innerHTML = '';
+
+                filteredNotes.sort((a, b) => new Date(b.updateTime) - new Date(a.updateTime)).forEach(note => {
+                    const noteCard = document.createElement('div');
+                    noteCard.className = 'bg-white rounded-lg p-4 note-shadow note-hover';
+                    noteCard.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="font-semibold text-lg truncate">${note.title || '无标题笔记'}</h3>
+                            <span class="text-xs text-gray-400">${formatDate(note.updateTime || note.createTime)}</span>
+                        </div>
+                        <div class="text-gray-600 text-sm preserve-format-clamp mb-4">${note.content || '无内容'}</div>
+                        ${note.attachments && note.attachments.length > 0 ? 
+                            `<div class="flex items-center text-xs text-gray-500 mb-2">
+                                <i class="fa fa-paperclip mr-1"></i>
+                                <span>${note.attachments.length} 个附件</span>
+                            </div>` : ''
+                        }
+                        <div class="flex justify-end space-x-2">
+                            <button class="view-note text-primary text-sm hover:text-blue-700" data-id="${note.id}">
+                                <i class="fa fa-eye mr-1"></i> 查看
                             </button>
-                            <button class="edit-note text-primary hover:text-blue-700" data-id="${note.id}">
-                                <i class="fa fa-pencil mr-1"></i>编辑
+                            <button class="edit-note text-secondary text-sm hover:text-gray-700" data-id="${note.id}">
+                                <i class="fa fa-pencil mr-1"></i> 编辑
                             </button>
                         </div>
-                    </div>
-                `;
-                
-                noteDiv.querySelector('.view-note').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    openDetailModal(note.id);
+                    `;
+
+                    noteCard.querySelector('.view-note').addEventListener('click', () => viewNote(note.id));
+                    noteCard.querySelector('.edit-note').addEventListener('click', () => editNote(note.id));
+
+                    notesGrid.appendChild(noteCard);
                 });
-                noteDiv.querySelector('.edit-note').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    openModal(note.id);
-                });
-                noteDiv.addEventListener('click', () => {
-                    openDetailModal(note.id);
-                });
-                
-                return noteDiv;
             }
 
-            function openDetailModal(noteId) {
-                currentNoteId = noteId;
-                const note = notes.find(n => n.id === noteId);
-                if (note) {
-                    detailNoteTitle.textContent = note.title || '无标题';
-                    detailNoteContent.textContent = note.content || '无内容';
-                    detailNoteTime.textContent = `最后更新：${formatDate(note.updatedAt)}`;
-                    renderDetailAttachmentsList(note.attachments);
-                    detailModal.classList.remove('hidden');
-                }
-            }
+            function formatDate(dateString) {
+                const date = new Date(dateString);
+                const now = new Date();
+                const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
 
-            function closeDetailModalFunc() {
-                detailModal.classList.add('hidden');
-                currentNoteId = null;
-            }
-
-            function openModal(noteId = null) {
-                currentNoteId = noteId;
-                currentAttachments = [];
-                
-                if (noteId) {
-                    const note = notes.find(n => n.id === noteId);
-                    if (note) {
-                        modalTitle.textContent = '编辑笔记';
-                        noteTitle.value = note.title || '';
-                        noteContent.value = note.content || '';
-                        if (note.attachments) {
-                            currentAttachments = [...note.attachments];
-                            currentAttachments.forEach(att => {
-                                if (att.type.includes('image') && !att.previewUrl) {
-                                    const base64Data = att.data.split(',')[1];
-                                    const byteCharacters = atob(base64Data);
-                                    const byteNumbers = new Array(byteCharacters.length);
-                                    for (let i = 0; i < byteCharacters.length; i++) {
-                                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                                    }
-                                    const byteArray = new Uint8Array(byteNumbers);
-                                    const file = new File([byteArray], att.name, { type: att.type });
-                                    att.previewUrl = URL.createObjectURL(file);
-                                }
-                            });
-                        }
-                        deleteNoteBtn.classList.remove('hidden');
-                    }
+                if (diffInDays === 0) {
+                    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                } else if (diffInDays === 1) {
+                    return '昨天 ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                } else if (diffInDays < 7) {
+                    return diffInDays + '天前';
                 } else {
-                    modalTitle.textContent = '新建笔记';
-                    noteTitle.value = '';
-                    noteContent.value = '';
-                    deleteNoteBtn.classList.add('hidden');
+                    return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
                 }
-                
-                renderAttachmentsList();
-                noteModal.classList.remove('hidden');
-                noteTitle.focus();
             }
 
-            function closeModalFunc() {
-                noteModal.classList.add('hidden');
+            function viewNote(noteId) {
+                const note = notes.find(n => n.id === noteId);
+                if (!note) return;
+
+                detailNoteTitle.textContent = note.title || '无标题笔记';
+                detailNoteContent.textContent = note.content || '无内容';
+                detailNoteTime.textContent = `最后编辑: ${new Date(note.updateTime || note.createTime).toLocaleString('zh-CN')}`;
+                
+                // 显示笔记所属分类
+                const categoryName = getCategoryName(note.categoryId);
+                detailNoteCategory.textContent = categoryName;
+
+                currentAttachments = note.attachments || [];
+                renderDetailAttachmentsList(currentAttachments);
+
+                detailModal.classList.remove('hidden');
+            }
+
+            // 根据分类ID获取分类名称
+            function getCategoryName(categoryId) {
+                if (!categoryId || categoryId === 'uncategorized') {
+                    return '未分类';
+                }
+                const category = categories.find(cat => cat.id === categoryId);
+                return category ? category.name : '未分类';
+            }
+
+            function editNote(noteId) {
+                const note = notes.find(n => n.id === noteId);
+                if (!note) return;
+
+                currentNoteId = noteId;
+                modalTitle.textContent = '编辑笔记';
+                noteTitle.value = note.title || '';
+                noteContent.value = note.content || '';
+                currentAttachments = note.attachments || [];
+                
+                // 更新分类选择器
+                updateNoteCategorySelect();
+
+                renderAttachmentsList();
+                deleteNoteBtn.classList.remove('hidden');
+                noteModal.classList.remove('hidden');
+            }
+
+            function createNewNote() {
                 currentNoteId = null;
+                modalTitle.textContent = '新建笔记';
                 noteTitle.value = '';
                 noteContent.value = '';
-                
-                currentAttachments.forEach(att => {
-                    if (att.type.includes('image') && att.previewUrl && att.previewUrl !== att.data) {
-                        URL.revokeObjectURL(att.previewUrl);
-                    }
-                });
-                
                 currentAttachments = [];
+                
+                // 设置默认分类为当前选中的分类
+                noteCategorySelect.value = currentCategoryId;
+
                 renderAttachmentsList();
+                deleteNoteBtn.classList.add('hidden');
+                noteModal.classList.remove('hidden');
             }
 
             function saveNote() {
                 const title = noteTitle.value.trim();
                 const content = noteContent.value;
-                
-                if (!title && !content.trim() && currentAttachments.length === 0) {
-                    showNotification('请输入笔记标题/内容，或上传附件', 'error');
+                // 获取选中的分类ID
+                const categoryId = noteCategorySelect.value;
+
+                if (!title && !content && currentAttachments.length === 0) {
+                    showNotification('笔记内容不能为空', 'error');
                     return;
                 }
-                
-                const timestamp = new Date().toISOString();
-                
+
                 if (currentNoteId) {
-                    const noteIndex = notes.findIndex(n => n.id === currentNoteId);
-                    if (noteIndex !== -1) {
-                        const cleanAttachments = currentAttachments.map(att => {
-                            const { previewUrl, ...cleanAtt } = att;
-                            return cleanAtt;
-                        });
-                        
-                        notes[noteIndex] = {
-                            ...notes[noteIndex],
-                            title,
-                            content,
-                            attachments: cleanAttachments,
-                            updatedAt: timestamp
+                    // 更新现有笔记
+                    const index = notes.findIndex(n => n.id === currentNoteId);
+                    if (index !== -1) {
+                        notes[index] = {
+                            ...notes[index],
+                            title: title,
+                            content: content,
+                            categoryId: categoryId, // 更新分类
+                            attachments: [...currentAttachments],
+                            updateTime: new Date().toISOString()
                         };
-                        showNotification('笔记已更新');
+                        showNotification('笔记更新成功');
                     }
                 } else {
-                    const cleanAttachments = currentAttachments.map(att => {
-                        const { previewUrl, ...cleanAtt } = att;
-                        return cleanAtt;
-                    });
-                    
+                    // 创建新笔记
                     const newNote = {
                         id: generateId(),
-                        title,
-                        content,
-                        attachments: cleanAttachments,
-                        createdAt: timestamp,
-                        updatedAt: timestamp
+                        title: title,
+                        content: content,
+                        categoryId: categoryId, // 设置分类
+                        attachments: [...currentAttachments],
+                        createTime: new Date().toISOString(),
+                        updateTime: new Date().toISOString()
                     };
-                    notes.unshift(newNote);
-                    showNotification('笔记已创建');
+                    notes.push(newNote);
+                    showNotification('笔记创建成功');
                 }
-                
+
                 localStorage.setItem('notes', JSON.stringify(notes));
+                noteModal.classList.add('hidden');
                 renderNotes();
-                closeModalFunc();
             }
 
             function deleteNote() {
-                if (currentNoteId) {
+                if (!currentNoteId) return;
+
+                if (confirm('确定要删除这篇笔记吗？此操作不可撤销。')) {
                     notes = notes.filter(n => n.id !== currentNoteId);
                     localStorage.setItem('notes', JSON.stringify(notes));
+                    showNotification('笔记已删除');
+                    noteModal.classList.add('hidden');
                     renderNotes();
-                    closeModalFunc();
-                    showNotification('笔记已删除', 'error');
                 }
             }
 
             function showNotification(message, type = 'success') {
                 notificationText.textContent = message;
                 
-                if (type === 'success') {
-                    notification.classList.remove('bg-red-500');
-                    notification.classList.add('bg-green-500');
-                    notificationIcon.className = 'fa fa-check-circle mr-2';
-                } else {
-                    notification.classList.remove('bg-green-500');
-                    notification.classList.add('bg-red-500');
+                if (type === 'error') {
                     notificationIcon.className = 'fa fa-exclamation-circle mr-2';
+                    notification.className = notification.className.replace('bg-green-500', 'bg-red-500');
+                } else {
+                    notificationIcon.className = 'fa fa-check-circle mr-2';
+                    notification.className = notification.className.replace('bg-red-500', 'bg-green-500');
                 }
-                
+
                 notification.classList.remove('translate-y-16', 'opacity-0');
-                
+                notification.classList.add('translate-y-0', 'opacity-100');
+
                 setTimeout(() => {
+                    notification.classList.remove('translate-y-0', 'opacity-100');
                     notification.classList.add('translate-y-16', 'opacity-0');
                 }, 3000);
             }
 
-            function generateId() {
-                return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+            function updateFontSize() {
+                fontSizeDisplay.textContent = `${currentFontSize}px`;
+                localStorage.setItem('fontSize', currentFontSize);
+                document.documentElement.style.setProperty('--note-font-size', `${currentFontSize}px`);
             }
 
-            function formatDate(dateString) {
-                const date = new Date(dateString);
-                const now = new Date();
-                const diff = now - date;
-                
-                if (diff < 60000) return '刚刚';
-                if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
-                if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
-                if (diff < 2592000000) return `${Math.floor(diff / 86400000)}天前`;
-                return date.toLocaleDateString('zh-CN');
+            function setupEventListeners() {
+                // 笔记相关事件
+                newNoteBtn.addEventListener('click', createNewNote);
+                emptyStateNewBtn.addEventListener('click', createNewNote);
+                closeModal.addEventListener('click', () => noteModal.classList.add('hidden'));
+                cancelBtn.addEventListener('click', () => noteModal.classList.add('hidden'));
+                saveNoteBtn.addEventListener('click', saveNote);
+                deleteNoteBtn.addEventListener('click', deleteNote);
+                closeDetailModal.addEventListener('click', () => detailModal.classList.add('hidden'));
+                editFromDetailBtn.addEventListener('click', () => {
+                    detailModal.classList.add('hidden');
+                    editNote(currentNoteId);
+                });
+
+                // 字体大小调整
+                increaseFont.addEventListener('click', () => {
+                    if (currentFontSize < 24) {
+                        currentFontSize++;
+                        updateFontSize();
+                    }
+                });
+
+                decreaseFont.addEventListener('click', () => {
+                    if (currentFontSize > 12) {
+                        currentFontSize--;
+                        updateFontSize();
+                    }
+                });
+
+                // 搜索功能
+                searchInput.addEventListener('input', (e) => {
+                    searchTerm = e.target.value;
+                    renderNotes();
+                });
+
+                // 预览相关事件
+                closePreviewModal.addEventListener('click', closePreviewModalFunc);
+                downloadFromPreviewBtn.addEventListener('click', () => {
+                    if (currentPreviewAttachment) {
+                        downloadAttachment(currentPreviewAttachment);
+                    }
+                });
+
+                prevAttachmentBtn.addEventListener('click', prevAttachment);
+                nextAttachmentBtn.addEventListener('click', nextAttachment);
+
+                // PDF翻页事件
+                pdfPrevBtn.addEventListener('click', () => {
+                    if (currentPdfPage > 1) {
+                        currentPdfPage--;
+                        renderPdfPage(currentPdfPage);
+                    }
+                });
+
+                pdfNextBtn.addEventListener('click', () => {
+                    if (currentPdfPage < totalPdfPages) {
+                        currentPdfPage++;
+                        renderPdfPage(currentPdfPage);
+                    }
+                });
             }
 
             initApp();
